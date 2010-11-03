@@ -6,7 +6,7 @@ Deployment environment for buildout-based projects using git.
 Installation
 ------------
 
-Standard workflow for deploying an application using clip is:
+Standard workflow for deploying an application using clip is::
 
          junkafarian$ git clone git://github.com/junkafarian/clip.git PROJECT_NAME
          junkafarian$ python ./virtualenv.py --no-site-packages --distribute .
