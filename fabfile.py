@@ -3,7 +3,7 @@
 """
 
 from os import listdir
-from os.path import join, isdir, isfile
+from os.path import join, isdir, isfile, dirname
 from fabric.api import env, local, cd
 from fabric.api import prompt
 from fabric.colors import green, red
@@ -11,9 +11,20 @@ from fabric.colors import green, red
 
 ## Configuration ##
 
-SANDBOX_DIR = 'dev'
-CURRENT_DIR = 'current'
-GIT_REPO = 'git@github.com:largeblue/openideo.git'
+from ConfigParser import SafeConfigParser
+
+here = dirname(__file__)
+config = SafeConfigParser({'here': here})
+config.read(['clip.cfg'])
+
+if 'env' not in config.sections():
+    print red('WARNING: No [env] section found in clip.cfg')
+if 'repo' not in config.sections():
+    print red('WARNING: No [repo] section found in clip.cfg')
+
+SANDBOX_DIR = config.get('env', 'sandbox_dir')
+CURRENT_DIR = config.get('env', 'current_dir')
+GIT_REPO = config.get('repo', 'url')
 
 
 ## Scripts ##
@@ -55,7 +66,10 @@ def update(target=SANDBOX_DIR):
         setup(target)
 
     if target == SANDBOX_DIR:
-        current = local('git describe --abbrev=0 --tags')
+        with cd(target):
+            local('git fetch --tags')
+            current = local('git describe --abbrev=0 --tags')
+        
         if current not in dirs:
             print 'Setting up current tag:', green(current)
             setup(current)
@@ -72,9 +86,22 @@ def update(target=SANDBOX_DIR):
         # Run tests
         #local('')
 
+    if 'post_build_scripts' in config.options('env'):
+        print green('Running post-build scripts')
+        with cd(target):
+            scripts = config.get('env', 'post_build_scripts')
+            run_scripts(scripts)
+    
     ## Finally, symlink CURRENT_DIR
-    # Remove existing CURRENT_DIR?
+    # Remove existing CURRENT_DIR
+    local('rm %s' % CURRENT_DIR)
     local('ln -s %s %s' % (target, CURRENT_DIR))
+
+    if 'post_success_scripts' in config.options('env'):
+        print green('Running post-success scripts')
+        with cd(CURRENT_DIR):
+            scripts = config.get('env', 'post_success_scripts')
+            run_scripts(scripts)
     # Prompt user for additional directory links outside the buildout
     # while True:
     #     d = prompt('Link directory:')
@@ -82,3 +109,13 @@ def update(target=SANDBOX_DIR):
     #         local('ln -s %s %s' % (d, join(target, d)))
 
 
+def run_scripts(scripts):
+    for script in scripts.split('\n'):
+        if 'script:%s' % script in config.sections():
+            commands = config.get('script:%s' % script, 'commands')
+            for command in commands.split('\n'):
+                if command:
+                        local(command, capture=False)
+        elif script:
+            print red('Script "%s" not defined in clip.cfg' % script)
+    
