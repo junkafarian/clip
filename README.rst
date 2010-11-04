@@ -52,7 +52,7 @@ The new layout will look something like::
       - virtualenv.py
     - etc/
       - clip.cfg
-    - current/
+    - current/ -> releases/tagname
     - dev/
     - releases/
       - tagname
