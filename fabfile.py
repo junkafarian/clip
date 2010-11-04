@@ -1,7 +1,7 @@
 """ Local scripts to manage cloning new tags and updating the
     currently running version.
 """
-
+from __future__ import with_statement
 from os import listdir
 from os.path import join, isdir, isfile, dirname
 from fabric.api import env, local, cd
