@@ -14,3 +14,4 @@ lib/*
 parts/*
 docs/_build/*
 *.cov2emacs.log
+var/*
