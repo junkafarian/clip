@@ -35,3 +35,33 @@ in a predictable location on the filesystem (default ``current``).
  
 To update the instance to the newest release, run ``./bin/fab update``
 
+
+TODO
+----
+
+Remove dependencies on Fabric and zc.buildout - Currently there are a
+lot of unnecessary distractions in the environment due to the standard
+buildout installation. For the next release will aim to provide a
+cleaner structure and environment for easier installation and
+management.
+
+The new layout will look something like::
+
+    - bin/
+      - clip
+      - virtualenv.py
+    - etc/
+      - clip.cfg
+    - current/
+    - dev/
+    - releases/
+      - tagname
+      - ...
+
+With the setup process requiring less pythonic build steps::
+
+    wget http://path/to/clip.tgz
+    tar -zxf clip.tgz
+    mv clip PROJECT_NAME
+    cd PROJECT_NAME
+    ... edit ``etc/clip.cfg`` and run actions using ``./bin/clip ...`` 
