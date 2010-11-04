@@ -33,3 +33,5 @@ release, symlinks are switched from the old release to the new one.
 This allows for the most recent stable release to always be accessible
 in a predictable location on the filesystem (default ``current``).
  
+To update the instance to the newest release, run ``./bin/fab update``
+
