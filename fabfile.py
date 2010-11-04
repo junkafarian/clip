@@ -58,23 +58,7 @@ def setup(target=SANDBOX_DIR):
         bootstrap()
 
 
-def update(target=SANDBOX_DIR):
-
-    dirs = [d for d in listdir('.') if isdir(d) and d not in ['bin', 'etc', '.git', 'develop-eggs', 'eggs', 'include', 'lib', 'parts']]
-    
-    if target not in dirs:
-        setup(target)
-
-    if target == SANDBOX_DIR:
-        with cd(target):
-            local('git fetch --tags')
-            current = local('git describe --abbrev=0 --tags')
-        
-        if current not in dirs:
-            print 'Setting up current tag:', green(current)
-            setup(current)
-    
-
+def build(target, make_current=False):
     with cd(target):
         # Run Buildout
         if not isdir('./%s/bin' % target):
@@ -91,22 +75,49 @@ def update(target=SANDBOX_DIR):
         with cd(target):
             scripts = config.get('env', 'post_build_scripts')
             run_scripts(scripts)
-    
-    ## Finally, symlink CURRENT_DIR
-    # Remove existing CURRENT_DIR
-    local('rm %s' % CURRENT_DIR)
-    local('ln -s %s %s' % (target, CURRENT_DIR))
 
-    if 'post_success_scripts' in config.options('env'):
-        print green('Running post-success scripts')
-        with cd(CURRENT_DIR):
-            scripts = config.get('env', 'post_success_scripts')
-            run_scripts(scripts)
-    # Prompt user for additional directory links outside the buildout
-    # while True:
-    #     d = prompt('Link directory:')
-    #     if d:
-    #         local('ln -s %s %s' % (d, join(target, d)))
+
+    if make_current:
+        ## Finally, symlink CURRENT_DIR
+        # Remove existing CURRENT_DIR
+        if CURRENT_DIR in listdir('.'):
+            local('rm %s' % CURRENT_DIR)
+    
+        local('ln -s %s %s' % (target, CURRENT_DIR))
+
+        if 'post_success_scripts' in config.options('env'):
+            print green('Running post-success scripts')
+            with cd(CURRENT_DIR):
+                scripts = config.get('env', 'post_success_scripts')
+                run_scripts(scripts)
+        # Prompt user for additional directory links outside the buildout
+        # while True:
+        #     d = prompt('Link directory:')
+        #     if d:
+        #         local('ln -s %s %s' % (d, join(target, d)))
+    
+
+def update(target=SANDBOX_DIR):
+
+    dirs = [d for d in listdir('.') if isdir(d) and d not in ['bin', 'etc', '.git', 'develop-eggs', 'eggs', 'include', 'lib', 'parts']]
+    
+    if target not in dirs:
+        setup(target)
+
+    if target == SANDBOX_DIR:
+        with cd(target):
+            local('git fetch --tags')
+            current = local('git describe --abbrev=0 --tags')
+        
+        if current not in dirs:
+            print 'Setting up current tag:', green(current)
+            setup(current)
+
+        build(current, make_current=True)
+        build(target)
+
+    else:
+        build(target, make_current=True)
 
 
 def run_scripts(scripts):
