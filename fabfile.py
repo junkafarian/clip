@@ -7,6 +7,7 @@ from os.path import join, isdir, isfile, dirname
 from fabric.api import env, local, cd
 from fabric.api import prompt
 from fabric.colors import green, red
+from fabric.contrib.console import confirm
 
 
 ## Configuration ##
@@ -58,7 +59,7 @@ def setup(target=SANDBOX_DIR):
         bootstrap()
 
 
-def build(target, make_current=False):
+def build(target, activate=False):
     with cd(target):
         # Run Buildout
         if not isdir('./%s/bin' % target):
@@ -76,25 +77,27 @@ def build(target, make_current=False):
             scripts = config.get('env', 'post_build_scripts')
             run_scripts(scripts)
 
-
-    if make_current:
-        ## Finally, symlink CURRENT_DIR
-        # Remove existing CURRENT_DIR
-        if CURRENT_DIR in listdir('.'):
-            local('rm %s' % CURRENT_DIR)
     
-        local('ln -s %s %s' % (target, CURRENT_DIR))
+    if activate:
+        if ('activate_prompt' in config.options('env')) and (config.get('env', 'activate_prompt') not in ('1', 'True', 'true')):
+            activate_prompt = False
+        else:
+            activate_prompt = True
 
-        if 'post_success_scripts' in config.options('env'):
-            print green('Running post-success scripts')
-            with cd(CURRENT_DIR):
-                scripts = config.get('env', 'post_success_scripts')
-                run_scripts(scripts)
-        # Prompt user for additional directory links outside the buildout
-        # while True:
-        #     d = prompt('Link directory:')
-        #     if d:
-        #         local('ln -s %s %s' % (d, join(target, d)))
+        if (activate_prompt and confirm('Activate %s?' % target)) or not activate_prompt:
+        
+            ## Finally, symlink CURRENT_DIR
+            # Remove existing CURRENT_DIR
+            if CURRENT_DIR in listdir('.'):
+                local('rm %s' % CURRENT_DIR)
+                
+            local('ln -s %s %s' % (target, CURRENT_DIR))
+
+            if 'post_activation_scripts' in config.options('env'):
+                print green('Running post-activation scripts')
+                with cd(CURRENT_DIR):
+                    scripts = config.get('env', 'post_activation_scripts')
+                    run_scripts(scripts)
     
 
 def update(target=SANDBOX_DIR):
@@ -113,11 +116,11 @@ def update(target=SANDBOX_DIR):
             print 'Setting up current tag:', green(current)
             setup(current)
 
-        build(current, make_current=True)
+        build(current, activate=True)
         build(target)
 
     else:
-        build(target, make_current=True)
+        build(target, activate=True)
 
 
 def run_scripts(scripts):
