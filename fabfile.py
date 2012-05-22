@@ -32,11 +32,11 @@ GIT_REPO = config.get('repo', 'url')
 
 def virtualenv():
     #local('../bin/python ../virtualenv.py --no-site-packages --distribute .')
-    local('../bin/python ../virtualenv.py --no-site-packages .')
+    local('python ../virtualenv.py --no-site-packages .')
 
 def bootstrap():
     #local('../bin/python bootstrap.py --distribute')
-    local('../bin/python bootstrap.py')
+    local('bin/python bootstrap.py')
 
 def setup(target=SANDBOX_DIR):
     local('git clone %s %s' % (GIT_REPO, target))
@@ -45,10 +45,10 @@ def setup(target=SANDBOX_DIR):
         local('git submodule init')
         local('git submodule sync')
         local('git submodule update')
-        
+
         tags = local('git tag')
         if target in tags:
-            local('git checkout %s' % target)
+            local('git checkout -b %s origin/%s' % (target, target))
             print(green('Checked out %s' % target))
             return
         else:
@@ -62,11 +62,11 @@ def setup(target=SANDBOX_DIR):
 def build(target, activate=False):
     with cd(target):
         # Run Buildout
-        if not isdir('./%s/bin' % target):
+        if not isdir('bin'):
             virtualenv()
-        if not isfile('./%s/bin/buildout' % target):
+        if not isfile('bin/buildout'):
             bootstrap()
-        local('./bin/buildout -U', capture=False)
+        local('bin/buildout -U', capture=False)
 
         # Run tests
         #local('')
@@ -77,7 +77,7 @@ def build(target, activate=False):
             scripts = config.get('env', 'post_build_scripts')
             run_scripts(scripts)
 
-    
+
     if activate:
         if ('activate_prompt' in config.options('env')) and (config.get('env', 'activate_prompt') not in ('1', 'True', 'true')):
             activate_prompt = False
@@ -85,12 +85,12 @@ def build(target, activate=False):
             activate_prompt = True
 
         if (activate_prompt and confirm('Activate %s?' % target)) or not activate_prompt:
-        
+
             ## Finally, symlink CURRENT_DIR
             # Remove existing CURRENT_DIR
             if CURRENT_DIR in listdir('.'):
                 local('rm %s' % CURRENT_DIR)
-                
+
             local('ln -s %s %s' % (target, CURRENT_DIR))
 
             if 'post_activation_scripts' in config.options('env'):
@@ -98,12 +98,12 @@ def build(target, activate=False):
                 with cd(CURRENT_DIR):
                     scripts = config.get('env', 'post_activation_scripts')
                     run_scripts(scripts)
-    
+
 
 def update(target=SANDBOX_DIR):
 
     dirs = [d for d in listdir('.') if isdir(d) and d not in ['bin', 'etc', '.git', 'develop-eggs', 'eggs', 'include', 'lib', 'parts']]
-    
+
     if target not in dirs:
         setup(target)
 
@@ -111,7 +111,7 @@ def update(target=SANDBOX_DIR):
         with cd(target):
             local('git fetch --tags')
             current = local('git describe --abbrev=0 --tags')
-        
+
         if current not in dirs:
             print 'Setting up current tag:', green(current)
             setup(current)
@@ -129,7 +129,7 @@ def run_scripts(scripts):
             commands = config.get('script:%s' % script, 'commands')
             for command in commands.split('\n'):
                 if command:
-                        local(command, capture=False)
+                    local(command, capture=False)
         elif script:
             print red('Script "%s" not defined in clip.cfg' % script)
-    
+
