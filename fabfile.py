@@ -48,9 +48,8 @@ def setup(target=SANDBOX_DIR):
 
         tags = local('git tag')
         if target in tags:
-            local('git checkout -b %s origin/%s' % (target, target))
+            local('git checkout -b %s %s' % (target, target))
             print(green('Checked out %s' % target))
-            return
         else:
             print(red('No tag named %s' % target))
             print(red('Using trunk'))
