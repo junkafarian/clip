@@ -4,7 +4,7 @@
 from __future__ import with_statement
 from os import listdir
 from os.path import join, isdir, isfile, dirname
-from fabric.api import env, local, cd
+from fabric.api import env, local, cd, lcd
 from fabric.api import prompt
 from fabric.colors import green, red
 from fabric.contrib.console import confirm
@@ -31,16 +31,16 @@ GIT_REPO = config.get('repo', 'url')
 ## Scripts ##
 
 def virtualenv():
-    #local('../bin/python ../virtualenv.py --no-site-packages --distribute .')
     local('python ../virtualenv.py --no-site-packages .')
 
 def bootstrap():
-    #local('../bin/python bootstrap.py --distribute')
     local('bin/python bootstrap.py')
 
 def setup(target=SANDBOX_DIR):
-    local('git clone %s %s' % (GIT_REPO, target))
-    with cd(target):
+    if not isdir(target):
+        local('git clone %s %s' % (GIT_REPO, target))
+
+    with lcd(target):
         # finish git setup
         local('git submodule init')
         local('git submodule sync')
@@ -48,9 +48,8 @@ def setup(target=SANDBOX_DIR):
 
         tags = local('git tag')
         if target in tags:
-            local('git checkout -b %s origin/%s' % (target, target))
+            local('git checkout -b %s %s' % (target, target))
             print(green('Checked out %s' % target))
-            return
         else:
             print(red('No tag named %s' % target))
             print(red('Using trunk'))
@@ -60,7 +59,7 @@ def setup(target=SANDBOX_DIR):
 
 
 def build(target, activate=False):
-    with cd(target):
+    with lcd(target):
         # Run Buildout
         if not isdir('bin'):
             virtualenv()
@@ -73,7 +72,7 @@ def build(target, activate=False):
 
     if 'post_build_scripts' in config.options('env'):
         print green('Running post-build scripts')
-        with cd(target):
+        with lcd(target):
             scripts = config.get('env', 'post_build_scripts')
             run_scripts(scripts)
 
@@ -95,7 +94,7 @@ def build(target, activate=False):
 
             if 'post_activation_scripts' in config.options('env'):
                 print green('Running post-activation scripts')
-                with cd(CURRENT_DIR):
+                with lcd(CURRENT_DIR):
                     scripts = config.get('env', 'post_activation_scripts')
                     run_scripts(scripts)
 
@@ -108,7 +107,7 @@ def update(target=SANDBOX_DIR):
         setup(target)
 
     if target == SANDBOX_DIR:
-        with cd(target):
+        with lcd(target):
             local('git fetch --tags')
             current = local('git describe --abbrev=0 --tags')
 
